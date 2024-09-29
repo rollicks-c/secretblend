@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>secretblend: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/rollicks-c/secretblend/api.go (85.7%)</option>
+				
+				<option value="file1">github.com/rollicks-c/secretblend/data.go (100.0%)</option>
+				
+				<option value="file2">github.com/rollicks-c/secretblend/inject.go (75.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package secretblend
+
+type Provider interface {
+        LoadSecret(uri string) (string, error)
+}
+
+func AddProvider(provider Provider, protocols ...string) <span class="cov8" title="1">{
+        for _, proto := range protocols </span><span class="cov8" title="1">{
+                providerList[protocol(proto)] = provider
+        }</span>
+}
+
+func Inject[T any](subject T) (T, error) <span class="cov8" title="1">{
+        inject := injector[T]{}
+        injectedSubject, err := inject.injectSecrets(subject)
+        if err != nil </span><span class="cov0" title="0">{
+                return subject, err
+        }</span>
+        <span class="cov8" title="1">return injectedSubject, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package secretblend
+
+type protocol string
+
+var (
+        providerList map[protocol]Provider
+)
+
+func init() <span class="cov8" title="1">{
+        providerList = make(map[protocol]Provider)
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package secretblend
+
+import (
+        "encoding/json"
+        "fmt"
+        "strings"
+)
+
+type injector[T any] struct {
+}
+
+type visitor func(key string, value interface{}) (interface{}, error)
+
+func (i injector[T]) injectSecrets(subject T) (T, error) <span class="cov8" title="1">{
+
+        // transform to generic map
+        flat, err := i.toFlat(subject)
+        if err != nil </span><span class="cov0" title="0">{
+                return subject, err
+        }</span>
+
+        // visit all nodes
+        <span class="cov8" title="1">if err := i.visitNode(flat, i.processNode); err != nil </span><span class="cov0" title="0">{
+                return subject, err
+        }</span>
+
+        // transform back to subject
+        <span class="cov8" title="1">injectedSubject, err := i.fromFlat(flat)
+        if err != nil </span><span class="cov0" title="0">{
+                return subject, err
+        }</span>
+
+        <span class="cov8" title="1">return *injectedSubject, nil</span>
+
+}
+
+func (i injector[T]) toFlat(subject T) (map[string]interface{}, error) <span class="cov8" title="1">{
+
+        raw, err := json.Marshal(subject)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">var flat map[string]interface{}
+        if err = json.Unmarshal(raw, &amp;flat); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return flat, nil</span>
+}
+
+func (i injector[T]) fromFlat(flat map[string]interface{}) (*T, error) <span class="cov8" title="1">{
+        raw, err := json.Marshal(flat)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">var subject T
+        if err = json.Unmarshal(raw, &amp;subject); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return &amp;subject, nil</span>
+}
+
+func (i injector[T]) visitNode(item map[string]interface{}, visitor visitor) error <span class="cov8" title="1">{
+
+        for key, value := range item </span><span class="cov8" title="1">{
+                node, isNode := value.(map[string]interface{})
+                if isNode </span><span class="cov0" title="0">{
+                        if err := i.visitNode(node, visitor); err != nil </span><span class="cov0" title="0">{
+                                return err
+                        }</span>
+                } else<span class="cov8" title="1"> {
+                        newValue, err := visitor(key, value)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return err
+                        }</span>
+                        <span class="cov8" title="1">item[key] = newValue</span>
+                }
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (i injector[T]) processNode(key string, valueRaw interface{}) (interface{}, error) <span class="cov8" title="1">{
+
+        // skip none-strings
+        value, ok := valueRaw.(string)
+        if !ok </span><span class="cov8" title="1">{
+                return valueRaw, nil
+        }</span>
+
+        // extract protocol
+        <span class="cov8" title="1">parts := strings.Split(value, "://")
+        if len(parts) != 2 </span><span class="cov8" title="1">{
+                return valueRaw, nil
+        }</span>
+        <span class="cov8" title="1">proto := protocol(fmt.Sprintf("%s://", parts[0]))
+        secretURI := parts[1]
+
+        // find provider
+        provider, ok := providerList[proto]
+        if !ok </span><span class="cov0" title="0">{
+                return valueRaw, nil
+        }</span>
+
+        // inject secret
+        <span class="cov8" title="1">secret, err := provider.LoadSecret(secretURI)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return secret, nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
