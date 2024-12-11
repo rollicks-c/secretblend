@@ -55,11 +55,11 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rollicks-c/secretblend/api.go (85.7%)</option>
+				<option value="file0">github.com/rollicks-c/secretblend/api.go (75.0%)</option>
 				
 				<option value="file1">github.com/rollicks-c/secretblend/data.go (100.0%)</option>
 				
-				<option value="file2">github.com/rollicks-c/secretblend/inject.go (75.0%)</option>
+				<option value="file2">github.com/rollicks-c/secretblend/inject.go (69.8%)</option>
 				
 				</select>
 			</div>
@@ -81,9 +81,13 @@ type Provider interface {
 
 func AddProvider(provider Provider, protocols ...string) <span class="cov8" title="1">{
         for _, proto := range protocols </span><span class="cov8" title="1">{
-                providerList[protocol(proto)] = provider
+                protocolProviders[protocol(proto)] = provider
         }</span>
 }
+
+func AddGlobalProvider(provider Provider) <span class="cov0" title="0">{
+        globalProviders = append(globalProviders, provider)
+}</span>
 
 func Inject[T any](subject T) (T, error) <span class="cov8" title="1">{
         inject := injector[T]{}
@@ -100,11 +104,13 @@ func Inject[T any](subject T) (T, error) <span class="cov8" title="1">{
 type protocol string
 
 var (
-        providerList map[protocol]Provider
+        protocolProviders map[protocol]Provider
+        globalProviders   []Provider
 )
 
 func init() <span class="cov8" title="1">{
-        providerList = make(map[protocol]Provider)
+        protocolProviders = make(map[protocol]Provider)
+        globalProviders = make([]Provider, 0)
 }</span>
 </pre>
 		
@@ -200,18 +206,27 @@ func (i injector[T]) processNode(key string, valueRaw interface{}) (interface{},
                 return valueRaw, nil
         }</span>
 
+        // apply global injectors
+        <span class="cov8" title="1">for _, gp := range globalProviders </span><span class="cov0" title="0">{
+                processedValue, err := gp.LoadSecret(value)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">value = processedValue</span>
+        }
+
         // extract protocol
         <span class="cov8" title="1">parts := strings.Split(value, "://")
         if len(parts) != 2 </span><span class="cov8" title="1">{
-                return valueRaw, nil
+                return value, nil
         }</span>
         <span class="cov8" title="1">proto := protocol(fmt.Sprintf("%s://", parts[0]))
         secretURI := parts[1]
 
         // find provider
-        provider, ok := providerList[proto]
+        provider, ok := protocolProviders[proto]
         if !ok </span><span class="cov0" title="0">{
-                return valueRaw, nil
+                return value, nil
         }</span>
 
         // inject secret
