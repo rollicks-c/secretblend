@@ -90,18 +90,27 @@ func (i injector[T]) processNode(key string, valueRaw interface{}) (interface{},
 		return valueRaw, nil
 	}
 
+	// apply global injectors
+	for _, gp := range globalProviders {
+		processedValue, err := gp.LoadSecret(value)
+		if err != nil {
+			return nil, err
+		}
+		value = processedValue
+	}
+
 	// extract protocol
 	parts := strings.Split(value, "://")
 	if len(parts) != 2 {
-		return valueRaw, nil
+		return value, nil
 	}
 	proto := protocol(fmt.Sprintf("%s://", parts[0]))
 	secretURI := parts[1]
 
 	// find provider
-	provider, ok := providerList[proto]
+	provider, ok := protocolProviders[proto]
 	if !ok {
-		return valueRaw, nil
+		return value, nil
 	}
 
 	// inject secret
