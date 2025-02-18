@@ -64,14 +64,33 @@ func (i injector[T]) fromFlat(flat map[string]interface{}) (*T, error) {
 }
 
 func (i injector[T]) visitNode(item map[string]interface{}, visitor visitor) error {
-
 	for key, value := range item {
-		node, isNode := value.(map[string]interface{})
-		if isNode {
-			if err := i.visitNode(node, visitor); err != nil {
+		switch v := value.(type) {
+		case map[string]interface{}:
+			// If value is a nested map, recurse into it
+			if err := i.visitNode(v, visitor); err != nil {
 				return err
 			}
-		} else {
+		case []interface{}:
+			// If value is a slice, iterate and process each element
+			for index, element := range v {
+				switch elem := element.(type) {
+				case map[string]interface{}:
+					// If element is a map, recurse into it
+					if err := i.visitNode(elem, visitor); err != nil {
+						return err
+					}
+				default:
+					// Otherwise, apply the visitor function
+					newValue, err := visitor(fmt.Sprintf("%s[%d]", key, index), elem)
+					if err != nil {
+						return err
+					}
+					v[index] = newValue
+				}
+			}
+		default:
+			// Process individual key-value pairs
 			newValue, err := visitor(key, value)
 			if err != nil {
 				return err
