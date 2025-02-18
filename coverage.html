@@ -59,7 +59,7 @@
 				
 				<option value="file1">github.com/rollicks-c/secretblend/data.go (100.0%)</option>
 				
-				<option value="file2">github.com/rollicks-c/secretblend/inject.go (69.8%)</option>
+				<option value="file2">github.com/rollicks-c/secretblend/inject.go (66.7%)</option>
 				
 				</select>
 			</div>
@@ -180,14 +180,33 @@ func (i injector[T]) fromFlat(flat map[string]interface{}) (*T, error) <span cla
 }
 
 func (i injector[T]) visitNode(item map[string]interface{}, visitor visitor) error <span class="cov8" title="1">{
-
         for key, value := range item </span><span class="cov8" title="1">{
-                node, isNode := value.(map[string]interface{})
-                if isNode </span><span class="cov0" title="0">{
-                        if err := i.visitNode(node, visitor); err != nil </span><span class="cov0" title="0">{
+                switch v := value.(type) </span>{
+                case map[string]interface{}:<span class="cov8" title="1">
+                        // If value is a nested map, recurse into it
+                        if err := i.visitNode(v, visitor); err != nil </span><span class="cov0" title="0">{
                                 return err
                         }</span>
-                } else<span class="cov8" title="1"> {
+                case []interface{}:<span class="cov8" title="1">
+                        // If value is a slice, iterate and process each element
+                        for index, element := range v </span><span class="cov8" title="1">{
+                                switch elem := element.(type) </span>{
+                                case map[string]interface{}:<span class="cov8" title="1">
+                                        // If element is a map, recurse into it
+                                        if err := i.visitNode(elem, visitor); err != nil </span><span class="cov0" title="0">{
+                                                return err
+                                        }</span>
+                                default:<span class="cov0" title="0">
+                                        // Otherwise, apply the visitor function
+                                        newValue, err := visitor(fmt.Sprintf("%s[%d]", key, index), elem)
+                                        if err != nil </span><span class="cov0" title="0">{
+                                                return err
+                                        }</span>
+                                        <span class="cov0" title="0">v[index] = newValue</span>
+                                }
+                        }
+                default:<span class="cov8" title="1">
+                        // Process individual key-value pairs
                         newValue, err := visitor(key, value)
                         if err != nil </span><span class="cov0" title="0">{
                                 return err
