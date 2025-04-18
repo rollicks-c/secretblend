@@ -10,7 +10,7 @@ func AddProvider(provider Provider, protocols ...string) {
 	}
 }
 func HasProvider(protocolName string) bool {
-	_, isRegistered := providerList[protocol(protocolName)]
+	_, isRegistered := protocolProviders[protocol(protocolName)]
 	return isRegistered
 }
 
