@@ -55,7 +55,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/rollicks-c/secretblend/api.go (75.0%)</option>
+				<option value="file0">github.com/rollicks-c/secretblend/api.go (60.0%)</option>
 				
 				<option value="file1">github.com/rollicks-c/secretblend/data.go (100.0%)</option>
 				
@@ -84,6 +84,10 @@ func AddProvider(provider Provider, protocols ...string) <span class="cov8" titl
                 protocolProviders[protocol(proto)] = provider
         }</span>
 }
+func HasProvider(protocolName string) bool <span class="cov0" title="0">{
+        _, isRegistered := protocolProviders[protocol(protocolName)]
+        return isRegistered
+}</span>
 
 func AddGlobalProvider(provider Provider) <span class="cov0" title="0">{
         globalProviders = append(globalProviders, provider)
