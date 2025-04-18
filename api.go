@@ -9,6 +9,10 @@ func AddProvider(provider Provider, protocols ...string) {
 		providerList[protocol(proto)] = provider
 	}
 }
+func HasProvider(protocolName string) bool {
+	_, isRegistered := providerList[protocol(protocolName)]
+	return isRegistered
+}
 
 func Inject[T any](subject T) (T, error) {
 	inject := injector[T]{}
