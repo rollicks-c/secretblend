@@ -6,12 +6,16 @@ type Provider interface {
 
 func AddProvider(provider Provider, protocols ...string) {
 	for _, proto := range protocols {
-		providerList[protocol(proto)] = provider
+		protocolProviders[protocol(proto)] = provider
 	}
 }
 func HasProvider(protocolName string) bool {
 	_, isRegistered := providerList[protocol(protocolName)]
 	return isRegistered
+}
+
+func AddGlobalProvider(provider Provider) {
+	globalProviders = append(globalProviders, provider)
 }
 
 func Inject[T any](subject T) (T, error) {

@@ -3,9 +3,11 @@ package secretblend
 type protocol string
 
 var (
-	providerList map[protocol]Provider
+	protocolProviders map[protocol]Provider
+	globalProviders   []Provider
 )
 
 func init() {
-	providerList = make(map[protocol]Provider)
+	protocolProviders = make(map[protocol]Provider)
+	globalProviders = make([]Provider, 0)
 }

@@ -64,14 +64,33 @@ func (i injector[T]) fromFlat(flat map[string]interface{}) (*T, error) {
 }
 
 func (i injector[T]) visitNode(item map[string]interface{}, visitor visitor) error {
-
 	for key, value := range item {
-		node, isNode := value.(map[string]interface{})
-		if isNode {
-			if err := i.visitNode(node, visitor); err != nil {
+		switch v := value.(type) {
+		case map[string]interface{}:
+			// If value is a nested map, recurse into it
+			if err := i.visitNode(v, visitor); err != nil {
 				return err
 			}
-		} else {
+		case []interface{}:
+			// If value is a slice, iterate and process each element
+			for index, element := range v {
+				switch elem := element.(type) {
+				case map[string]interface{}:
+					// If element is a map, recurse into it
+					if err := i.visitNode(elem, visitor); err != nil {
+						return err
+					}
+				default:
+					// Otherwise, apply the visitor function
+					newValue, err := visitor(fmt.Sprintf("%s[%d]", key, index), elem)
+					if err != nil {
+						return err
+					}
+					v[index] = newValue
+				}
+			}
+		default:
+			// Process individual key-value pairs
 			newValue, err := visitor(key, value)
 			if err != nil {
 				return err
@@ -90,18 +109,27 @@ func (i injector[T]) processNode(key string, valueRaw interface{}) (interface{},
 		return valueRaw, nil
 	}
 
+	// apply global injectors
+	for _, gp := range globalProviders {
+		processedValue, err := gp.LoadSecret(value)
+		if err != nil {
+			return nil, err
+		}
+		value = processedValue
+	}
+
 	// extract protocol
 	parts := strings.Split(value, "://")
 	if len(parts) != 2 {
-		return valueRaw, nil
+		return value, nil
 	}
 	proto := protocol(fmt.Sprintf("%s://", parts[0]))
 	secretURI := parts[1]
 
 	// find provider
-	provider, ok := providerList[proto]
+	provider, ok := protocolProviders[proto]
 	if !ok {
-		return valueRaw, nil
+		return value, nil
 	}
 
 	// inject secret
